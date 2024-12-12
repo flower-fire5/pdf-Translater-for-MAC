@@ -27,7 +27,7 @@
     
     // 左右分屏布局
     self.splitView = [[NSSplitView alloc] initWithFrame:self.view.bounds];
-    [self.splitView setDividerStyle:NSSplitViewDividerStyleThin];
+    [self.splitView setDividerStyle:NSSplitViewDividerStyleThick];
     [self.splitView setVertical:YES];
     self.splitView.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
     self.splitView.autoresizesSubviews = YES; // 确保子视图大小自动调整
@@ -47,7 +47,7 @@
     self.translationContainer = [[NSScrollView alloc] init];
     _translationView = [[NSTextView alloc] initWithFrame:self.translationContainer.bounds];
     [_translationView setEditable:NO];
-    [_translationView setFont:[NSFont systemFontOfSize:14]];
+    [_translationView setFont:[NSFont systemFontOfSize:16]];
     _translationView.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
     // 为 NSTextView 设置边框
    _translationView.layer = [CALayer layer];  // 创建一个 layer
