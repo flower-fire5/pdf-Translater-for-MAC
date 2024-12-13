@@ -9,12 +9,22 @@
 #import <AFNetworking/AFNetworking.h>
 #import <Masonry.h>
 
-@interface ViewController()
+@interface ViewController() <NSTextFieldDelegate>
 
 @property(nonatomic, strong) NSSplitView *splitView;
 @property(nonatomic, strong) NSScrollView *pdfContainer;
 @property(nonatomic, strong) NSScrollView *translationContainer;
 @property (nonatomic, copy) NSString *translationEngine;
+@property (nonatomic, strong) NSSearchField *searchField;
+@property (nonatomic, strong) NSTextField *searchTextField;
+@property (nonatomic, strong) NSButton *closeButton;
+@property (nonatomic, strong) NSButton *prevButton;
+@property (nonatomic, strong) NSButton *nextButton;
+@property (nonatomic, strong) NSTextField *resultLabel;
+@property (nonatomic, strong) NSArray<PDFSelection *> *matches;
+@property (nonatomic, strong) NSMutableArray<PDFSelection *> *highlights;
+@property (nonatomic, assign) NSInteger currentMatchIndex;
+@property (nonatomic, strong) NSView *searchContainer;
 
 @end
 
@@ -75,6 +85,12 @@
     
     // 加载默认 PDF 文档
     [self loadDefaultPDF];
+    
+    // 添加搜索框
+    [self setupSearchField];
+    
+    // 设置快捷键
+    [self setupKeyBindings];
 }
 
 - (void)viewWillAppear {
@@ -219,6 +235,7 @@
     } else {
         [super keyDown:event]; // 继续处理其他按键事件
     }
+    
 }
 
 - (BOOL)acceptsFirstResponder {
@@ -237,6 +254,259 @@
             break;
         default:
             break;
+    }
+}
+
+#pragma mark - 实现快捷键功能
+//- (BOOL)performKeyEquivalent:(NSEvent *)event {
+//    if (([event modifierFlags] & NSEventModifierFlagCommand) && [event keyCode] == 8) { // cmd + C
+//        [self copySelectedText];
+//        return YES;
+//    }
+//    if (([event modifierFlags] & NSEventModifierFlagCommand) && [event keyCode] == 3) { // cmd + F
+//        [self toggleSearchBox];
+//        return YES;
+//    }
+//    if (([event modifierFlags] & NSEventModifierFlagCommand) && [event keyCode] == 47) { // cmd + G (Next)
+//        [self nextMatch];
+//        return YES;
+//    }
+//    if (([event modifierFlags] & NSEventModifierFlagCommand) && [event keyCode] == 43) { // cmd + Shift + G (Previous)
+//        [self previousMatch];
+//        return YES;
+//    }
+//    return [super performKeyEquivalent:event];
+//}
+
+- (void)setupKeyBindings {
+    // 添加全局快捷键监听
+    [NSEvent addLocalMonitorForEventsMatchingMask:NSEventMaskKeyDown handler:^NSEvent * _Nullable(NSEvent * _Nonnull event) {
+        // 检查是否按下 Cmd 键
+        BOOL isCommandPressed = (event.modifierFlags & NSEventModifierFlagCommand) != 0;
+        BOOL isShiftPressed = (event.modifierFlags & NSEventModifierFlagShift) != 0;
+        
+        if (isCommandPressed) {
+            switch (event.keyCode) {
+                case 8: // "C" 键
+                    [self copySelectedText];
+                    return nil; // 拦截事件
+                    
+                case 3: // "F" 键
+                    [self toggleSearchBox];
+                    return nil; // 拦截事件
+                    
+                case 5: // "G" 键
+                    if (isShiftPressed) {
+                        [self previousMatch]; // Cmd+Shift+G
+                    } else {
+                        [self nextMatch]; // Cmd+G
+                    }
+                    return nil; // 拦截事件
+            }
+        }
+        return event; // 不拦截其他事件
+    }];
+}
+
+
+#pragma mark - 复制选中文本
+
+- (void)copySelectedText {
+    PDFSelection *selection = self.pdfView.currentSelection;
+    if (selection) {
+        NSString *selectedText = [selection string];
+        if (selectedText.length > 0) {
+            // 复制到剪贴板
+            NSPasteboard *pasteboard = [NSPasteboard generalPasteboard];
+            [pasteboard clearContents];
+            [pasteboard setString:selectedText forType:NSPasteboardTypeString];
+            NSLog(@"Copied: %@", selectedText);
+        } else {
+            NSLog(@"No text selected to copy.");
+        }
+    }
+}
+
+#pragma mark - 搜索框设置
+
+- (void)setupSearchField {
+    // 搜索框容器视图
+    NSView *searchContainer = [[NSView alloc] init];
+    searchContainer.hidden = YES; // 默认隐藏
+    [self.view addSubview:searchContainer];
+    
+    // 使用 Masonry 布局搜索容器
+    [searchContainer mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.top.equalTo(self.pdfView.mas_top); // 与 PDFView 顶部对齐
+        make.left.equalTo(self.view.mas_left).offset(20); // 左侧偏移 20
+        make.right.equalTo(self.view.mas_right).offset(-20); // 右侧偏移 -20
+        make.height.equalTo(@40); // 固定高度
+    }];
+    
+    // 创建搜索框
+    self.searchTextField = [[NSTextField alloc] init];
+    self.searchTextField.placeholderString = @"Search PDF...";
+    self.searchTextField.delegate = self;
+    [searchContainer addSubview:self.searchTextField];
+    
+    [self.searchTextField mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.equalTo(searchContainer.mas_left); // 左对齐
+        make.centerY.equalTo(searchContainer.mas_centerY); // 垂直居中
+        make.width.equalTo(@200); // 固定宽度
+    }];
+
+    // 创建关闭按钮
+    self.closeButton = [[NSButton alloc] init];
+    [self.closeButton setTitle:@"Close"];
+    [self.closeButton setTarget:self];
+    [self.closeButton setAction:@selector(closeSearch)];
+    [searchContainer addSubview:self.closeButton];
+    
+    [self.closeButton mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.equalTo(self.searchTextField.mas_right).offset(10); // 紧跟在搜索框右侧
+        make.centerY.equalTo(searchContainer.mas_centerY); // 垂直居中
+        make.width.equalTo(@50); // 固定宽度
+    }];
+
+    // 创建向前按钮
+    self.prevButton = [[NSButton alloc] init];
+    [self.prevButton setTitle:@"Prev"];
+    [self.prevButton setTarget:self];
+    [self.prevButton setAction:@selector(previousMatch)];
+    [searchContainer addSubview:self.prevButton];
+    
+    [self.prevButton mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.equalTo(self.closeButton.mas_right).offset(10); // 紧跟在关闭按钮右侧
+        make.centerY.equalTo(searchContainer.mas_centerY); // 垂直居中
+        make.width.equalTo(@50); // 固定宽度
+    }];
+
+    // 创建向后按钮
+    self.nextButton = [[NSButton alloc] init];
+    [self.nextButton setTitle:@"Next"];
+    [self.nextButton setTarget:self];
+    [self.nextButton setAction:@selector(nextMatch)];
+    [searchContainer addSubview:self.nextButton];
+    
+    [self.nextButton mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.equalTo(self.prevButton.mas_right).offset(10); // 紧跟在向前按钮右侧
+        make.centerY.equalTo(searchContainer.mas_centerY); // 垂直居中
+        make.width.equalTo(@50); // 固定宽度
+    }];
+
+    // 创建结果显示标签
+    self.resultLabel = [[NSTextField alloc] init];
+    self.resultLabel.stringValue = @"0/0";
+    self.resultLabel.editable = NO;
+    self.resultLabel.bordered = NO;
+    self.resultLabel.backgroundColor = [NSColor clearColor];
+    self.resultLabel.alignment = NSTextAlignmentCenter; // 居中对齐
+    [searchContainer addSubview:self.resultLabel];
+    
+    [self.resultLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.equalTo(self.nextButton.mas_right).offset(10); // 紧跟在向后按钮右侧
+        make.centerY.equalTo(searchContainer.mas_centerY); // 垂直居中
+        make.width.equalTo(@50); // 固定宽度
+    }];
+    
+    // 保存搜索容器到实例变量（便于显示/隐藏）
+    self.searchContainer = searchContainer;
+    
+    // 初始化搜索结果数组
+    self.matches = [NSArray array];
+    self.currentMatchIndex = -1;
+    self.highlights = [NSMutableArray array];
+}
+
+#pragma mark - 搜索框显示/隐藏逻辑
+
+- (void)toggleSearchBox {
+    BOOL isSearchBoxVisible = !self.searchContainer.hidden;
+    self.searchContainer.hidden = isSearchBoxVisible; // 切换搜索容器可见性
+    
+    if (!isSearchBoxVisible) {
+        // 打开搜索框时，清空之前的高亮
+        [self clearHighlights];
+    }
+}
+
+- (void)closeSearch {
+    self.searchContainer.hidden = YES; // 隐藏搜索框容器
+    [self clearHighlights]; // 清除高亮
+}
+
+#pragma mark - 搜索与高亮管理
+
+- (void)clearHighlights {
+    // 移除所有高亮标记
+    for (PDFAnnotation *highlight in self.highlights) {
+        [highlight.page removeAnnotation:highlight];
+    }
+    [self.highlights removeAllObjects];
+
+    // 清空匹配结果
+    self.matches = @[];
+    self.currentMatchIndex = -1;
+    self.resultLabel.stringValue = @"0/0";
+}
+
+- (void)controlTextDidChange:(NSNotification *)notification {
+    NSString *searchText = self.searchTextField.stringValue;
+    if (searchText.length > 0) {
+        [self searchPDFForText:searchText];
+    } else {
+        [self clearHighlights];
+    }
+}
+
+- (void)searchPDFForText:(NSString *)searchText {
+    [self clearHighlights];
+    
+    PDFDocument *document = self.pdfView.document;
+    self.matches = [document findString:searchText withOptions:NSCaseInsensitiveSearch];
+    
+    if (self.matches.count > 0) {
+        self.currentMatchIndex = 0;
+        [self highlightCurrentMatch];
+        self.resultLabel.stringValue = [NSString stringWithFormat:@"%ld/%ld", (long)(self.currentMatchIndex + 1), (long)self.matches.count];
+    } else {
+        self.resultLabel.stringValue = @"0/0";
+    }
+}
+
+- (void)highlightCurrentMatch {
+//    [self clearHighlighhts]; // 清除之前的高亮
+
+    if (self.currentMatchIndex >= 0 && self.currentMatchIndex < self.matches.count) {
+        PDFSelection *selection = self.matches[self.currentMatchIndex];
+        PDFPage *page = selection.pages[0];
+        NSRect bounds = [selection boundsForPage:page];
+        PDFAnnotation *highlight = [[PDFAnnotation alloc] initWithBounds:bounds forType:PDFAnnotationSubtypeHighlight withProperties:nil];
+        highlight.color = [NSColor yellowColor];
+
+        [page addAnnotation:highlight]; // 添加高亮标记
+        [self.highlights addObject:highlight];
+
+        // 滚动到高亮区域
+        [self.pdfView goToSelection:selection];
+    }
+}
+
+#pragma mark - 上一项/下一项导航
+
+- (void)nextMatch {
+    if (self.matches.count > 0) {
+        self.currentMatchIndex = (self.currentMatchIndex + 1) % self.matches.count;
+        [self highlightCurrentMatch];
+        self.resultLabel.stringValue = [NSString stringWithFormat:@"%ld/%ld", (long)(self.currentMatchIndex + 1), (long)self.matches.count];
+    }
+}
+
+- (void)previousMatch {
+    if (self.matches.count > 0) {
+        self.currentMatchIndex = (self.currentMatchIndex - 1 + self.matches.count) % self.matches.count;
+        [self highlightCurrentMatch];
+        self.resultLabel.stringValue = [NSString stringWithFormat:@"%ld/%ld", (long)(self.currentMatchIndex + 1), (long)self.matches.count];
     }
 }
 
