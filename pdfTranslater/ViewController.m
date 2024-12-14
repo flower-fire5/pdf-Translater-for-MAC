@@ -427,7 +427,7 @@
     if (!isSearchBoxVisible) {
         // 打开搜索框时，清空之前的高亮
         if (self.matches.count > 0) {
-            [self highlightCurrentMatch];
+            [self highlightAllMatches];
         }else {
             [self clearHighlights];
         }
@@ -463,7 +463,9 @@
     for (PDFAnnotation *highlight in self.highlights) {
         [highlight.page removeAnnotation:highlight];
     }
-    [self.highlights removeAllObjects];
+//    [self.highlights removeAllObjects];
+    self.prevMatchIndex = 0;
+    self.currentMatchIndex = 0;
 }
 
 
