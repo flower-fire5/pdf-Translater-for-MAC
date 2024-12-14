@@ -22,8 +22,9 @@
 @property (nonatomic, strong) NSButton *nextButton;
 @property (nonatomic, strong) NSTextField *resultLabel;
 @property (nonatomic, strong) NSArray<PDFSelection *> *matches;
-@property (nonatomic, strong) NSMutableArray<PDFSelection *> *highlights;
+@property (nonatomic, strong) NSMutableArray<PDFAnnotation *> *highlights;
 @property (nonatomic, assign) NSInteger currentMatchIndex;
+@property (nonatomic, assign) NSInteger prevMatchIndex;
 @property (nonatomic, strong) NSView *searchContainer;
 
 @end
@@ -308,7 +309,6 @@
     }];
 }
 
-
 #pragma mark - 复制选中文本
 
 - (void)copySelectedText {
@@ -426,13 +426,21 @@
     
     if (!isSearchBoxVisible) {
         // 打开搜索框时，清空之前的高亮
-        [self clearHighlights];
+        if (self.matches.count > 0) {
+            [self highlightCurrentMatch];
+        }else {
+            [self clearHighlights];
+        }
+        // 搜索框获取焦点
+        [self.searchTextField becomeFirstResponder];
+    } else {
+        [self closeSearch];
     }
 }
 
 - (void)closeSearch {
     self.searchContainer.hidden = YES; // 隐藏搜索框容器
-    [self clearHighlights]; // 清除高亮
+    [self hideHighlights]; // 清除高亮
 }
 
 #pragma mark - 搜索与高亮管理
@@ -449,6 +457,15 @@
     self.currentMatchIndex = -1;
     self.resultLabel.stringValue = @"0/0";
 }
+
+- (void)hideHighlights {
+    // 移除所有高亮标记
+    for (PDFAnnotation *highlight in self.highlights) {
+        [highlight.page removeAnnotation:highlight];
+    }
+    [self.highlights removeAllObjects];
+}
+
 
 - (void)controlTextDidChange:(NSNotification *)notification {
     NSString *searchText = self.searchTextField.stringValue;
@@ -467,35 +484,82 @@
     
     if (self.matches.count > 0) {
         self.currentMatchIndex = 0;
-        [self highlightCurrentMatch];
+        [self highlightAllMatches]; // 高亮所有匹配内容
         self.resultLabel.stringValue = [NSString stringWithFormat:@"%ld/%ld", (long)(self.currentMatchIndex + 1), (long)self.matches.count];
     } else {
         self.resultLabel.stringValue = @"0/0";
     }
 }
 
-- (void)highlightCurrentMatch {
-//    [self clearHighlighhts]; // 清除之前的高亮
 
+- (void)highlightAllMatches {
+    for (NSInteger i = 0; i < self.matches.count; i++) {
+        PDFSelection *selection = self.matches[i];
+        PDFPage *page = selection.pages[0];
+        NSRect bounds = [selection boundsForPage:page];
+        
+        // 设置高亮颜色：当前匹配项为橙色，其他为黄色
+        NSColor *highlightColor = (i == self.currentMatchIndex) ? [NSColor orangeColor] : [NSColor yellowColor];
+        
+        PDFAnnotation *highlight = [[PDFAnnotation alloc] initWithBounds:bounds forType:PDFAnnotationSubtypeHighlight withProperties:nil];
+        highlight.color = highlightColor;
+
+        [page addAnnotation:highlight]; // 添加高亮标记
+        [self.highlights addObject:highlight];
+    }
+}
+
+- (void)highlightCurrentMatch {
+    // 检查是否需要更新上一个匹配项
+    if (self.prevMatchIndex >= 0 && self.prevMatchIndex < self.matches.count) {
+        PDFSelection *selection = self.matches[self.prevMatchIndex];
+        PDFPage *page = selection.pages[0];
+        NSRect bounds = [selection boundsForPage:page];
+
+        // 清除之前的橙色高亮
+        if (self.highlights[self.prevMatchIndex]) {
+            [page removeAnnotation:self.highlights[self.prevMatchIndex]];
+        }
+
+        // 添加黄色高亮
+        PDFAnnotation *highlight = [[PDFAnnotation alloc] initWithBounds:bounds forType:PDFAnnotationSubtypeHighlight withProperties:nil];
+        highlight.color = [NSColor yellowColor];
+        [page addAnnotation:highlight];
+
+        // 更新 highlights 数组
+        self.highlights[self.prevMatchIndex] = highlight;
+    }
+
+    // 检查是否需要更新当前匹配项
     if (self.currentMatchIndex >= 0 && self.currentMatchIndex < self.matches.count) {
         PDFSelection *selection = self.matches[self.currentMatchIndex];
         PDFPage *page = selection.pages[0];
         NSRect bounds = [selection boundsForPage:page];
+
+        // 清除之前的黄色高亮（如果有）
+        if (self.highlights[self.currentMatchIndex]) {
+            [page removeAnnotation:self.highlights[self.currentMatchIndex]];
+        }
+
+        // 添加橙色高亮
         PDFAnnotation *highlight = [[PDFAnnotation alloc] initWithBounds:bounds forType:PDFAnnotationSubtypeHighlight withProperties:nil];
-        highlight.color = [NSColor yellowColor];
+        highlight.color = [NSColor orangeColor];
+        [page addAnnotation:highlight];
 
-        [page addAnnotation:highlight]; // 添加高亮标记
-        [self.highlights addObject:highlight];
+        // 更新 highlights 数组
+        self.highlights[self.currentMatchIndex] = highlight;
 
-        // 滚动到高亮区域
+        // 滚动到当前匹配项
         [self.pdfView goToSelection:selection];
     }
 }
+
 
 #pragma mark - 上一项/下一项导航
 
 - (void)nextMatch {
     if (self.matches.count > 0) {
+        self.prevMatchIndex = self.currentMatchIndex;
         self.currentMatchIndex = (self.currentMatchIndex + 1) % self.matches.count;
         [self highlightCurrentMatch];
         self.resultLabel.stringValue = [NSString stringWithFormat:@"%ld/%ld", (long)(self.currentMatchIndex + 1), (long)self.matches.count];
@@ -504,6 +568,7 @@
 
 - (void)previousMatch {
     if (self.matches.count > 0) {
+        self.prevMatchIndex = self.currentMatchIndex;
         self.currentMatchIndex = (self.currentMatchIndex - 1 + self.matches.count) % self.matches.count;
         [self highlightCurrentMatch];
         self.resultLabel.stringValue = [NSString stringWithFormat:@"%ld/%ld", (long)(self.currentMatchIndex + 1), (long)self.matches.count];

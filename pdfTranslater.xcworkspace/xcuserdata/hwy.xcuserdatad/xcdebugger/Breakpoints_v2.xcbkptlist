@@ -58,8 +58,8 @@
             filePath = "pdfTranslater/ViewController.m"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "262"
-            endingLineNumber = "262"
+            startingLineNumber = "263"
+            endingLineNumber = "263"
             landmarkName = "ViewController"
             landmarkType = "3">
          </BreakpointContent>
@@ -74,9 +74,9 @@
             filePath = "pdfTranslater/ViewController.m"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "456"
-            endingLineNumber = "456"
-            landmarkName = "-searchPDFForText:"
+            startingLineNumber = "473"
+            endingLineNumber = "473"
+            landmarkName = "-controlTextDidChange:"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -90,41 +90,9 @@
             filePath = "pdfTranslater/ViewController.m"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "466"
-            endingLineNumber = "466"
-            landmarkName = "-highlightCurrentMatch"
-            landmarkType = "7">
-         </BreakpointContent>
-      </BreakpointProxy>
-      <BreakpointProxy
-         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
-         <BreakpointContent
-            uuid = "A233F998-1D6E-4064-8DAF-0D14EE0BDF41"
-            shouldBeEnabled = "No"
-            ignoreCount = "0"
-            continueAfterRunningActions = "No"
-            filePath = "pdfTranslater/ViewController.m"
-            startingColumnNumber = "9223372036854775807"
-            endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "481"
-            endingLineNumber = "481"
-            landmarkName = "ViewController"
-            landmarkType = "3">
-         </BreakpointContent>
-      </BreakpointProxy>
-      <BreakpointProxy
-         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
-         <BreakpointContent
-            uuid = "AFA26B1F-5924-4E84-B6C3-F45436C68BE9"
-            shouldBeEnabled = "No"
-            ignoreCount = "0"
-            continueAfterRunningActions = "No"
-            filePath = "pdfTranslater/ViewController.m"
-            startingColumnNumber = "9223372036854775807"
-            endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "480"
-            endingLineNumber = "480"
-            landmarkName = "-highlightCurrentMatch"
+            startingLineNumber = "483"
+            endingLineNumber = "483"
+            landmarkName = "-searchPDFForText:"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -138,9 +106,9 @@
             filePath = "pdfTranslater/ViewController.m"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "469"
-            endingLineNumber = "469"
-            landmarkName = "-highlightCurrentMatch"
+            startingLineNumber = "486"
+            endingLineNumber = "486"
+            landmarkName = "-searchPDFForText:"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -148,46 +116,16 @@
          BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
          <BreakpointContent
             uuid = "AE5F1E98-B262-46D0-8ED1-52262D161779"
-            shouldBeEnabled = "Yes"
+            shouldBeEnabled = "No"
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "pdfTranslater/ViewController.m"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "458"
-            endingLineNumber = "458"
-            landmarkName = "-searchPDFForText:"
+            startingLineNumber = "475"
+            endingLineNumber = "475"
+            landmarkName = "-controlTextDidChange:"
             landmarkType = "7">
-            <Locations>
-               <Location
-                  uuid = "AE5F1E98-B262-46D0-8ED1-52262D161779 - bb2e0396b2ffb24b"
-                  shouldBeEnabled = "Yes"
-                  ignoreCount = "0"
-                  continueAfterRunningActions = "No"
-                  symbolName = "-[ViewController searchPDFForText:]"
-                  moduleName = "pdfTranslater"
-                  usesParentBreakpointCondition = "Yes"
-                  urlString = "file:///Users/hwy/Documents/code/oc/pdf-Translater-for-MAC/pdfTranslater/ViewController.m"
-                  startingColumnNumber = "9223372036854775807"
-                  endingColumnNumber = "9223372036854775807"
-                  startingLineNumber = "458"
-                  endingLineNumber = "458">
-               </Location>
-               <Location
-                  uuid = "AE5F1E98-B262-46D0-8ED1-52262D161779 - f53e0c18ea0de34c"
-                  shouldBeEnabled = "Yes"
-                  ignoreCount = "0"
-                  continueAfterRunningActions = "No"
-                  symbolName = "-[ViewController controlTextDidChange:]"
-                  moduleName = "pdfTranslater"
-                  usesParentBreakpointCondition = "Yes"
-                  urlString = "file:///Users/hwy/Documents/code/oc/pdf-Translater-for-MAC/pdfTranslater/ViewController.m"
-                  startingColumnNumber = "9223372036854775807"
-                  endingColumnNumber = "9223372036854775807"
-                  startingLineNumber = "458"
-                  endingLineNumber = "458">
-               </Location>
-            </Locations>
          </BreakpointContent>
       </BreakpointProxy>
    </Breakpoints>
